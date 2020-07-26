@@ -1,0 +1,214 @@
+---
+title: "Samuel Gitau"
+output: Week 14 IP
+---
+
+
+## Loading the dataset ----
+```{r}
+library(readr)
+df <- read_csv("Supermarket_Dataset_1 - Sales Data.csv")
+
+```
+###Previewing the first 6 rows 
+```{r}
+head(df)
+```
+###Previewing the last 6 rows
+```{r}
+tail(df)
+```
+#checking shape of the dataset
+```{r}
+dim(df)
+```
+## Checking Information  our dataset----
+###Checking number of columns 
+```{r}
+colnames(df)
+```
+```{r}
+install.packages("tibble")
+library(tibble)
+df <- as.tibble(df)
+df
+```
+###Checking summary statistics of our dataset
+```{r}
+summary(df)
+```
+## Cleaning the Dataset----
+###Check for missing values
+```{r}
+colSums(is.na(df))
+```
+###checking for duplicated values and removing them
+```{r}
+duplicated_rows <- df[duplicated(df),]
+df <- unique(df)
+dim(df)
+
+```
+###selecting numerical 
+```{r}
+num <- dplyr::select_if(df, is.numeric)
+head(num)
+```
+##PCA
+###We then pass df to the prcomp()----
+```{r}
+df.pca <- prcomp(num, center = TRUE, scale. = TRUE)
+summary(df.pca)
+```
+PC1 explains 60% of the total variance, which means that more than half
+ of the information in the dataset (11 variables) can be encapsulated 
+ by just that one Principal Component. PC2 explains 24% of the variance.
+ 
+# Calling str() to have a look at your PCA object
+# ---
+# 
+```{r}
+str(df.pca)
+```
+
+ we note that our pca object: The center point ($center), scaling ($scale), standard deviation(sdev) of each principal component. 
+The relationship (correlation or anticorrelation, etc) between the initial variables and the principal components ($rotation). 
+The values of each sample in terms of the principal components ($x)
+###We will now plot our pca.
+### Installing our ggbiplot visualisation package
+```{r}
+# plot method
+plot(df.pca, type = "l")
+```
+# summary method
+Importance of components:
+```{r}
+summary(df.pca)
+
+
+```
+```{r}
+library(devtools)
+install_github("ggbiplot", "vqv")
+
+library(ggbiplot)
+g <- ggbiplot(df.pca, obs.scale = 1, var.scale = 1, ellipse = TRUE, 
+              circle = TRUE)
+g <- g + scale_color_discrete(name = '')
+g <- g + theme(legend.direction = 'horizontal', 
+               legend.position = 'top')
+print(g)
+```
+
+```{r}
+library(devtools)
+install_github("vqv/ggbiplot")
+library(ggbiplot)
+ggbiplot(df.pca)
+```
+# From the graph we will see that the variables hp, cyl and disp contribute to PC1, 
+# with higher values in those variables moving the samples to the right on the plot. 
+# Adding more detail to the plot, we provide arguments rownames as labels
+# 
+```{r}
+ggbiplot(df.pca, labels=rownames(df), obs.scale = 1, var.scale = 1)
+```
+# We now see which cars are similar to one another. 
+# We can also look at the origin of each of the cars by putting them 
+# into one of three categories 
+```{r}
+mtcars.country <- c(rep("Japan", 3), rep("US",4), rep("Europe", 7),rep("US",3), "Europe", rep("Japan", 3), rep("US",4), rep("Europe", 3), "US", rep("Europe", 3))
+
+ggbiplot(mtcars.pca,ellipse=TRUE,  labels=rownames(mtcars), groups=mtcars.country, obs.scale = 1, var.scale = 1)
+```
+
+
+
+# We get to see that US cars for a cluster on the right. 
+# This cluster is characterized by high values for cyl, disp and wt. 
+# Japanese cars are characterized by high mpg. 
+# European cars are somewhat in the middle and less tightly clustered that either group.
+
+
+# We now plot PC3 and PC4
+```R
+ggbiplot(df.pca,ellipse=TRUE,choices=c(3,4),   labels=rownames(df), groups=mtcars.country)
+
+```
+
+
+
+# We find it difficult to derive insights from the given plot mainly because PC3 and PC4 
+# explain very small percentages of the total variation, thus it would be surprising 
+# if we found that they were very informative and separated the groups or revealed apparent patterns.
+
+
+# Having performed PCA using this dataset, if we were to build a classification model 
+# to identify the origin of a car (i.e. European, Japanese, US), 
+# the variables cyl, disp, wt and mpg would be significant variables as seen in our PCA analysis.
+
+#Association rule
+```R
+library(readr)
+Supermarket_Sales_Dataset_II <- read_csv("Supermarket_Sales_Dataset II.csv")
+View(Supermarket_Sales_Dataset_II)
+```
+
+# Finding association rules
+```{r}
+library(arules)
+rules <- apriori(mydata)
+```
+
+
+
+# Rules with specified parameter valus
+```{r}
+library(arules)
+rules <- apriori(mydata)
+```
+
+
+# Finding interesting rules-1
+```{r}
+rules <- apriori(mydata,parameter = list(minlen=2, maxlen=3,supp=.01, conf=.7),appearance=list(rhs=c("Foundation=Yes"),lhs=c("Bag=Yes", "Blush=Yes"),default="lhs"))
+```
+
+
+
+# Finding interesting rules-2
+```{r}
+rules <- apriori(mydata,parameter = list(minlen=2, maxlen=5,supp=.1, conf=.5),appearance=list(rhs=c("Foundation=Yes"),lhs=c("Bag=Yes", "Blush=Yes", "Nail.Polish=Yes", "Brushes=Yes", "Concealer=Yes", "Eyebrow.Pencils=Yes", "Bronzer=Yes", "Lip.liner=Yes", "Mascara=Yes", "Eye.shadow=Yes","Lip.Gloss=Yes", "Lipstick=Yes", "Eyeliner=Yes"),default="none"))
+quality(rules)<-round(quality(rules),digits=3)
+rules.sorted <- sort(rules, by="lift")
+```
+
+
+
+# Finding redundancy
+```{r}
+redundant <- is.redundant(rules, measure="confidence")
+which(redundant)
+rules.pruned <- rules[!redundant]
+rules.pruned <- sort(rules.pruned, by="lift")
+inspect(rules.pruned)
+```
+
+
+
+# Graphs and Charts
+```{r}
+library(arulesViz)
+plot(rules.all)
+plot(rules.all,method="grouped")
+plot(rules.all,method="graph",control=list(type="items"))
+```
+
+#Anomaly detection
+#Loading the dataset
+```{r}
+library(readr)
+Supermarket_Sales_Forecasting_Sales <- read_csv("Supermarket_Sales_Forecasting - Sales.csv")
+View(Supermarket_Sales_Forecasting_Sales)
+```
+

@@ -7,7 +7,7 @@ output: Week 14 IP
 ## Loading the dataset ----
 ```{r}
 library(readr)
-df <- read_csv("Supermarket_Dataset_1 - Sales Data.csv")
+df <- read_csv("C:/Users/user/Downloads/Supermarket_Dataset_1 - Sales Data.csv")
 
 ```
 ###Previewing the first 6 rows 
@@ -42,6 +42,7 @@ summary(df)
 ```{r}
 colSums(is.na(df))
 ```
+THere are no missing values
 ###checking for duplicated values and removing them
 ```{r}
 duplicated_rows <- df[duplicated(df),]
@@ -49,17 +50,29 @@ df <- unique(df)
 dim(df)
 
 ```
+The are no duplicate values
 ###selecting numerical 
 ```{r}
 num <- dplyr::select_if(df, is.numeric)
 head(num)
 ```
 ##PCA
+###get zero variance data
+```{r}
+which(apply(num, 2, var)==0)
+```
+###And to remove zero variance columns from the dataset
+```{r}
+num[ , which(apply(num, 2, var) != 0)]
+```
 ###We then pass df to the prcomp()----
 ```{r}
-df.pca <- prcomp(num, center = TRUE, scale. = TRUE)
+df.pca <- prcomp(num [,c(1,3,4,5,6,7)], center = TRUE, scale. = TRUE)
 summary(df.pca)
 ```
+mtcars.pca <- prcomp(mtcars[,c(1:7,10,11)], center = TRUE, scale. = TRUE)
+summary(mtcars.pca)
+
 PC1 explains 60% of the total variance, which means that more than half
  of the information in the dataset (11 variables) can be encapsulated 
  by just that one Principal Component. PC2 explains 24% of the variance.
@@ -106,103 +119,119 @@ install_github("vqv/ggbiplot")
 library(ggbiplot)
 ggbiplot(df.pca)
 ```
-# From the graph we will see that the variables hp, cyl and disp contribute to PC1, 
-# with higher values in those variables moving the samples to the right on the plot. 
-# Adding more detail to the plot, we provide arguments rownames as labels
-# 
+
 ```{r}
 ggbiplot(df.pca, labels=rownames(df), obs.scale = 1, var.scale = 1)
 ```
-# We now see which cars are similar to one another. 
-# We can also look at the origin of each of the cars by putting them 
-# into one of three categories 
+
 ```{r}
-mtcars.country <- c(rep("Japan", 3), rep("US",4), rep("Europe", 7),rep("US",3), "Europe", rep("Japan", 3), rep("US",4), rep("Europe", 3), "US", rep("Europe", 3))
-
-ggbiplot(mtcars.pca,ellipse=TRUE,  labels=rownames(mtcars), groups=mtcars.country, obs.scale = 1, var.scale = 1)
+ggbiplot(df.pca,ellipse=TRUE,  labels=rownames(df), groups=df.grossincome, obs.scale = 1, var.scale = 1)
 ```
-
-
-
-# We get to see that US cars for a cluster on the right. 
-# This cluster is characterized by high values for cyl, disp and wt. 
-# Japanese cars are characterized by high mpg. 
-# European cars are somewhat in the middle and less tightly clustered that either group.
-
-
 # We now plot PC3 and PC4
-```R
-ggbiplot(df.pca,ellipse=TRUE,choices=c(3,4),   labels=rownames(df), groups=mtcars.country)
+```{r}
+ggbiplot(df.pca,ellipse=TRUE,choices=c(3,4),   labels=rownames(df), groups=df.grossincome)
 
 ```
 
 
-
-# We find it difficult to derive insights from the given plot mainly because PC3 and PC4 
-# explain very small percentages of the total variation, thus it would be surprising 
-# if we found that they were very informative and separated the groups or revealed apparent patterns.
-
-
-# Having performed PCA using this dataset, if we were to build a classification model 
-# to identify the origin of a car (i.e. European, Japanese, US), 
-# the variables cyl, disp, wt and mpg would be significant variables as seen in our PCA analysis.
 
 #Association rule
-```R
-library(readr)
-Supermarket_Sales_Dataset_II <- read_csv("Supermarket_Sales_Dataset II.csv")
-View(Supermarket_Sales_Dataset_II)
+```{r}
+# We first we install the required arules library 
+#
+install.packages("arules")
 ```
 
-# Finding association rules
+
 ```{r}
+# Loading the arules library
+#
 library(arules)
-rules <- apriori(mydata)
 ```
 
-
-
-# Rules with specified parameter valus
+# Loading our transactions dataset from our csv file
 ```{r}
-library(arules)
-rules <- apriori(mydata)
+path <-"http://bit.ly/SupermarketDatasetII"
+
+Transactions<-read.transactions(path, sep = ",")
+Transactions
 ```
-
-
-# Finding interesting rules-1
+# Verifying the object's class
 ```{r}
-rules <- apriori(mydata,parameter = list(minlen=2, maxlen=3,supp=.01, conf=.7),appearance=list(rhs=c("Foundation=Yes"),lhs=c("Bag=Yes", "Blush=Yes"),default="lhs"))
+class(Transactions)
 ```
 
-
-
-# Finding interesting rules-2
+# Previewing our first 5 transactions
+#
 ```{r}
-rules <- apriori(mydata,parameter = list(minlen=2, maxlen=5,supp=.1, conf=.5),appearance=list(rhs=c("Foundation=Yes"),lhs=c("Bag=Yes", "Blush=Yes", "Nail.Polish=Yes", "Brushes=Yes", "Concealer=Yes", "Eyebrow.Pencils=Yes", "Bronzer=Yes", "Lip.liner=Yes", "Mascara=Yes", "Eye.shadow=Yes","Lip.Gloss=Yes", "Lipstick=Yes", "Eyeliner=Yes"),default="none"))
-quality(rules)<-round(quality(rules),digits=3)
-rules.sorted <- sort(rules, by="lift")
+inspect(Transactions[1:5])
 ```
-
-
-
-# Finding redundancy
+# Generating a summary of the transaction dataset
 ```{r}
-redundant <- is.redundant(rules, measure="confidence")
-which(redundant)
-rules.pruned <- rules[!redundant]
-rules.pruned <- sort(rules.pruned, by="lift")
-inspect(rules.pruned)
+summary(Transactions)
 ```
-
-
-
-# Graphs and Charts
+# Exploring the frequency of some articles 
 ```{r}
-library(arulesViz)
-plot(rules.all)
-plot(rules.all,method="grouped")
-plot(rules.all,method="graph",control=list(type="items"))
+itemFrequency(Transactions[, 8:10],type = "absolute")
+round(itemFrequency(Transactions[, 8:10],type = "relative")*100,2)
 ```
+# Producing a chart of frequencies and fitering 
+```{r}
+par(mfrow = c(1, 2))
+```
+# plot the frequency of items
+```{r}
+itemFrequencyPlot(Transactions, topN = 10,col="darkgreen")
+itemFrequencyPlot(Transactions, support = 0.1,col="darkred")
+```
+# Building a model based on association rules 
+# using the apriori function 
+```{r}
+rules <- apriori (Transactions, parameter = list(supp = 0.001, conf = 0.8))
+rules
+```
+WE obtain set 0f 74 rules
+# Building a apriori model with Min Support as 0.002 and confidence as 0.8.
+```{r}
+rules2 <- apriori (Transactions,parameter = list(supp = 0.002, conf = 0.8)) 
+```
+# Building apriori model with Min Support as 0.002 and confidence as 0.6.
+```{r}
+rules3 <- apriori (Transactions, parameter = list(supp = 0.001, conf = 0.6)) 
+```
+rule length distribution (lhs + rhs):sizes
+ 3  4  5  6 
+15 42 16  1 
+#to perform exploration of our model
+```{r}
+summary(rules)
+```
+summary of quality measures:
+    support           confidence        coverage             lift            count       
+ Min.   :0.001067   Min.   :0.8000   Min.   :0.001067   Min.   : 3.356   Min.   : 8.000  
+ 1st Qu.:0.001067   1st Qu.:0.8000   1st Qu.:0.001333   1st Qu.: 3.432   1st Qu.: 8.000  
+ Median :0.001133   Median :0.8333   Median :0.001333   Median : 3.795   Median : 8.500  
+ Mean   :0.001256   Mean   :0.8504   Mean   :0.001479   Mean   : 4.823   Mean   : 9.419  
+ 3rd Qu.:0.001333   3rd Qu.:0.8889   3rd Qu.:0.001600   3rd Qu.: 4.877   3rd Qu.:10.000  
+ Max.   :0.002533   Max.   :1.0000   Max.   :0.002666   Max.   :12.722   Max.   :19.000  
+# Observing rules built in our model i.e. first 5 model rules
+# ---
+# 
+```{r}
+inspect(rules[1:5])
+```
+1. If someone buys frozen smoothie and spinach. they are 89% likely to buy mineral water. 
+2. If someone buys bacon and pancakes, they are 81% likley to buy spaghetti
+
+# Ordering these rules by a criteria such as the level of confidence
+# then looking at the first five rules.
+```{r}
+rules<-sort(rules, by="confidence", decreasing=TRUE)
+inspect(rules[1:5])
+```
+The first four rules have a confidence of 100%
+
+
 
 #Anomaly detection
 #Loading the dataset
